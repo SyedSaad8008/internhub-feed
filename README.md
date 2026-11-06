@@ -14,10 +14,12 @@ city/stipend/duration/remote filters, and events + workshops in one place.
 
 | File | What it does |
 |---|---|
-| `scrape.py` | The scraper. Internships from Internshala + workshops/events per city → `data/feed.json` |
+| `scrape.py` | Internships from Internshala (8 keywords × 2 pages) + workshops/events from AllEvents.in and Eventbrite per city → `data/feed.json` |
 | `serve.py` | *Optional* API server (`/feed?type=&city=&q=`) if you ever want a real backend |
 | `data/feed.json` | The output your Flutter app fetches |
 | `.github/workflows/refresh.yml` | Runs the scraper **every Sunday automatically** on GitHub's free servers and commits the fresh feed |
+
+Typical output: **500+ internships and 200+ events** (~750 items) per run.
 
 ## Local run (test it anytime)
 
@@ -87,13 +89,16 @@ uvicorn serve:app --port 8000     # then GET http://localhost:8000/feed?city=hyd
 
 ## Customising
 
-- **Keywords / cities** — edit `DEFAULT_KEYWORDS` and `DEFAULT_CITIES` at the top of `scrape.py`
-  (e.g. add `"data science"`, `"graphic design"`, or cities like `"pune"`, `"bangalore"`).
-- **Events source** — `allevents()` is best-effort. Run `python scrape.py --debug`, open
-  `debug_allevents_<city>.html`, and if titles/links look wrong, adjust the CSS selectors
-  in that function.
-- **More sources later** — Unstop (hackathons), Naukri (jobs), Wellfound (startups) can be
-  added as new functions following the same pattern; each writes items with `type` and `source`.
+- **Keywords / pages / cities** — edit `DEFAULT_KEYWORDS` and `DEFAULT_CITIES` at the top of
+  `scrape.py` (e.g. add `"data science"`, `"graphic design"`, cities like `"jaipur"`), and
+  `--pages N` for more Internshala pages per keyword (each keyword page ≈ 40 internships).
+  AllEvents city slugs that differ are mapped in `ALLEVENTS_SLUGS` (e.g. pune → `puneindia`).
+- **Events sources** — AllEvents (`li.event-card` cards) and Eventbrite (server-rendered
+  schema.org `ItemList`, parsed straight from the page). If counts suddenly drop to 0, run
+  `python scrape.py --debug`, open the saved HTML, and adjust the selectors.
+- **More sources later** — Unstop (hackathons; JS-rendered, needs its private API — skip),
+  Devfolio (API requires auth — skip), Naukri (jobs), Wellfound (startups) can be added as
+  new functions following the same pattern; each writes items with `type` and `source`.
 
 ## Troubleshooting
 
@@ -101,8 +106,9 @@ uvicorn serve:app --port 8000     # then GET http://localhost:8000/feed?city=hyd
   names in the saved HTML with the selectors in `scrape.py`, update them.
 - **GitHub Action failed** — open the Actions tab, read the log; usually a selector fix
   (above) or a network hiccup. Just re-run.
-- **Rate limiting** — the scraper hits ~5 pages per run, once a week. If you add many more
-  keywords, keep the total under ~15 requests per run.
+- **Rate limiting** — the default run makes ~30 listing requests (16 Internshala pages +
+  14 event pages) once a week, plus up to 40 detail pages with `--details`. That's
+  human-browsing volume; if you add many more keywords, stay in the same ballpark.
 
 ## Legal note
 
